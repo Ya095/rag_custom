@@ -1,0 +1,7 @@
+[project]
+name = "rag-custom"
+version = "0.1.0"
+description = "Rag custom app."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
