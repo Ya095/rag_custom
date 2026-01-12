@@ -4,4 +4,22 @@ version = "0.1.0"
 description = "Rag custom app."
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "markitdown[pdf]==0.1.4",
+    "torch<2.3",
+    "sentence-transformers==5.2.0",
+    "langchain-text-splitters==1.1.0",
+    "chromadb>=1.4.0",
+    "langchain-ollama>=1.0.1",
+    "ollama>=0.6.1",
+]
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu" }
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
