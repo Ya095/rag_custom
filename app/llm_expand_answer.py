@@ -7,10 +7,6 @@ from torch import Tensor
 
 from db.db import ChromaWork
 
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 model = SentenceTransformer("multi-qa-mpnet-base-dot-v1")
 chroma_collection = ChromaWork().init_db()
