@@ -331,3 +331,7 @@ dmypy.json
 .pyre/
 .pytype/
 cython_debug/
+
+# custom
+/app/chroma.db
+/app/documents
