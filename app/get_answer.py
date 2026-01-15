@@ -4,7 +4,6 @@ from db.db import ChromaWork
 
 
 model = SentenceTransformer('multi-qa-mpnet-base-dot-v1')
-
 chroma_collection = ChromaWork().init_db()
 
 
