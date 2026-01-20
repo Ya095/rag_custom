@@ -1,49 +1,103 @@
-import base64
-from io import BytesIO
-from unstructured.documents.elements import Element
+import copy
 
-from extract_data.get_doc_chunks import chunks as doc_chunks
-from PIL import Image
+from unstructured.documents.elements import Element, Table, CompositeElement, Image
 
 
-def tables_and_texts(chunks: list[Element]) -> tuple[list, list]:
-    tables = []
-    texts = []
+def extract_tables_texts_images(chunks: list[Element]) -> tuple[list[Element], list[Element], list[Element]]:
+    tables: list[Element] = []
+    texts: list[Element] = []
+    images: list[Element] = []
 
     for chunk in chunks:
-        if 'Table' in str(type(chunk)):
+        # top-level table
+        if isinstance(chunk, Table):
             tables.append(chunk)
+            continue
 
-        if 'CompositeElement' in str(type(chunk)):
-            texts.append(chunk)
+        if isinstance(chunk, CompositeElement):
+            orig_elements = chunk.metadata.orig_elements or []
 
-    return tables, texts
+            text_elements = []
 
+            for el in orig_elements:
+                if isinstance(el, Table):
+                    tables.append(el)
+                elif isinstance(el, Image):
+                    images.append(el)
+                else:
+                    text_elements.append(el)
 
-def get_images(chunks: list[Element]) -> list[base64]:
-    """Get the images from the CompositeElement objects."""
+            # создаём КОПИЮ CompositeElement без таблиц и картинок
+            if text_elements:
+                chunk_copy = copy.copy(chunk)
+                chunk_copy.metadata = copy.copy(chunk.metadata)
+                chunk_copy.metadata.orig_elements = text_elements
+                texts.append(chunk_copy)
 
-    images = []
-    for chunk in chunks:
-        if 'CompositeElement' in str(type(chunk)):
-            chunk_els = chunk.metadata.orig_elements
-            for el in chunk_els:
-                if 'Image' in str(type(el)):
-                    images.append(el.metadata.image_base64)
-
-    return images
-
-
-def display_base64_images(base64_code) -> None:
-    image_data = base64.b64decode(base64_code)
-    image_file = BytesIO(image_data)
-    image = Image.open(image_file)
-
-    image.show()
+    return tables, texts, images
 
 
-if __name__ == '__main__':
-    chunks_: list[Element] = doc_chunks
-    images_list = get_images(chunks_)
-    display_base64_images(images_list[0])
+# def tables_and_texts(chunks: list[Element]) -> tuple[list[Element], list[Element]]:
+#     tables = []
+#     texts = []
+#
+#     for chunk in chunks:
+#         if chunk.category == 'Table':
+#             tables.append(chunk)
+#         elif chunk.category == 'CompositeElement':
+#             texts.append(chunk)
+#
+#     return tables, texts
+#
+#
+# def get_images(chunks: list[Element]) -> list[str]:
+#     """Get the images from the CompositeElement objects."""
+#
+#     images = []
+#     for chunk in chunks:
+#         if chunk.category == 'CompositeElement':
+#             chunk_els = chunk.metadata.orig_elements
+#             for el in chunk_els:
+#                 if el.category == 'Image':
+#                     images.append(el.metadata.image_base64)
+#
+#     return images
 
+
+# def extract_tables_images_texts(chunks: list[Element]) -> dict[str, list[Element]]:
+#     """Extract tables, images and texts from original chunks."""
+#
+#     tables: list[Element] = []
+#     texts: list[Element] = []
+#     images: list[Element] = []
+#
+#     for chunk in chunks:
+#         if chunk.category == 'CompositeElement':
+#             chunk_text_els: list[Element] = []
+#             chunk_els: list[Element] = chunk.metadata.orig_elements
+#
+#             for el in chunk_els:
+#                 if el.category == 'Table':
+#                     tables.append(el)
+#                 elif el.category == 'Image':
+#                     images.append(el)
+#                 else:
+#                     chunk_text_els.append(el)
+#
+#             chunk.metadata.orig_elements = chunk_text_els
+#             if chunk_text_els:
+#                 texts.append(chunk)
+#
+#         else:
+#             if chunk.category == 'Table':
+#                 tables.append(chunk)
+#             elif chunk.category == 'Image':
+#                 images.append(chunk)
+#             else:
+#                 texts.append(chunk)
+#
+#     return {
+#         'images': images,
+#         'texts': texts,
+#         'tables': tables,
+#     }

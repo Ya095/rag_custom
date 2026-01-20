@@ -13,6 +13,7 @@ dependencies = [
     "langchain>=1.2.6",
     "langchain-community>=0.4.1",
     "langchain-ollama==1.0.1",
+    "langchain-chroma>=1.1.0",
     "lxml>=6.0.2",
     "pillow>=12.1.0",
     "python-dotenv>=1.2.1",

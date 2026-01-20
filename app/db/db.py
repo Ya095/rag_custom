@@ -1,98 +1,155 @@
-import base64
 import uuid
+import pickle
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
 
-from langchain_community.vectorstores import Chroma
-from langchain_classic.storage import InMemoryStore
+from langchain_chroma import Chroma
+from langchain_classic.storage import LocalFileStore
 from langchain_core.documents import Document
 from langchain_classic.retrievers.multi_vector import MultiVectorRetriever
+from unstructured.documents.elements import Element
 
 from config import APP_PATH
 from embeddings.adapter_embedding import SentenceTransformerEmbeddings
 
 
 class ChromaWork:
-    def __init__(self):
-        self.db_path: Path = APP_PATH / 'chroma.db'
+    """
+    Chroma + LocalFileStore + MultiVectorRetriever
+    for multimodal (text / table / image) RAG.
+    """
+
+    def __init__(self) -> None:
+        self.db_path: Path = APP_PATH / "chroma.db"
+        self.doc_store_path: Path = APP_PATH / "docstore"
+
         self.vectorstore: Chroma | None = None
-        self.store: InMemoryStore | None = None
+        self.docstore: LocalFileStore | None = None
         self.retriever: MultiVectorRetriever | None = None
-        self.id_key: str = 'doc_id'
+
+        self.id_key: str = "doc_id"
 
     @lru_cache
     def init_db(self) -> MultiVectorRetriever:
-        """Initializing: Chroma + InMemoryStore + MultiVectorRetriever."""
+        """Initialize vectorstore, docstore and retriever."""
 
-        embeddings = SentenceTransformerEmbeddings(model_name='multi-qa-mpnet-base-dot-v1')
-        self.vectorstore = Chroma(
-            collection_name='multi_modal_rag',
-            collection_metadata={'description': 'Attention for transformers.'},
-            embedding_function=embeddings,
-            persist_directory=self.db_path.absolute().as_posix(),
+        embeddings = SentenceTransformerEmbeddings(
+            model_name="multi-qa-mpnet-base-dot-v1"
         )
 
-        self.store = InMemoryStore()
+        self.vectorstore = Chroma(
+            collection_name="multi_modal_rag",
+            collection_metadata={
+                "description": "Multimodal RAG: text, tables and images"
+            },
+            embedding_function=embeddings,
+            persist_directory=self.db_path.as_posix(),
+        )
+
+        self.docstore = LocalFileStore(root_path=self.doc_store_path.as_posix())
 
         self.retriever = MultiVectorRetriever(
             vectorstore=self.vectorstore,
-            docstore=self.store,
+            docstore=self.docstore,
             id_key=self.id_key,
         )
 
         return self.retriever
 
-    def add_text(self, texts: list[str], summaries: list[str]) -> None:
-        """Adding texts and it`s summaries."""
+    def add_texts(
+        self,
+        texts: list[Element],
+        summaries: list[str],
+        source_doc_id: str | None = None,
+    ) -> None:
+        self._add_elements(
+            elements=texts,
+            summaries=summaries,
+            source_doc_id=source_doc_id,
+        )
 
-        if not texts or not summaries:
-            print('No texts or summaries.')
+    def add_tables(
+        self,
+        tables: list[Element],
+        summaries: list[str],
+        source_doc_id: str | None = None,
+    ) -> None:
+        self._add_elements(
+            elements=tables,
+            summaries=summaries,
+            source_doc_id=source_doc_id,
+        )
+
+    def add_images(
+        self,
+        images: list[Element],
+        summaries: list[str],
+        source_doc_id: str | None = None,
+    ) -> None:
+        self._add_elements(
+            elements=images,
+            summaries=summaries,
+            source_doc_id=source_doc_id,
+        )
+
+    def _add_elements(
+        self,
+        elements: list[Element],
+        summaries: list[str],
+        source_doc_id: str | None = None,
+    ) -> None:
+        """Add elements with their summaries to vectorstore and originals to docstore.
+
+        Each summary is embedded.
+        Each original Element is serialized and stored in docstore.
+
+        """
+
+        if not elements or not summaries:
+            print("Nothing to add: empty elements or summaries.")
             return
 
-        doc_ids: list[str] = self.__generate_uuids(texts)
-        summary_docs: list[Document] = [
-            Document(page_content=summaries[num], metadata={self.id_key: doc_ids[num]})
-            for num in range(len(texts))
-        ]
+        if len(elements) != len(summaries):
+            raise ValueError("Elements and summaries length mismatch.")
+
+        if self.vectorstore is None or self.docstore is None:
+            raise RuntimeError("Database is not initialized. Call init_db() first.")
+
+        doc_ids: list[str] = self._generate_doc_ids(n=len(elements), source_doc_id=source_doc_id)
+
+        summary_docs: list[Document] = []
+        serialized_elements: list[tuple[str, bytes]] = []
+
+        for idx, element in enumerate(elements):
+            doc_id: str = doc_ids[idx]
+
+            summary_docs.append(
+                Document(
+                    page_content=summaries[idx],
+                    metadata={
+                        self.id_key: doc_id,
+                        "category": element.category,
+                        "source_doc_id": source_doc_id,
+                    },
+                )
+            )
+
+            serialized_elements.append((doc_id, self._serialize_element(element)))
 
         self.vectorstore.add_documents(summary_docs)
-        self.store.mset(list(zip(doc_ids, texts)))
-
-    def add_tables(self, tables: list[str], table_summaries: list[str]) -> None:
-        """Adding tables and it`s summaries."""
-
-        if not tables or not table_summaries:
-            print('No tables or table_summaries.')
-            return
-
-        table_ids: list[str] = self.__generate_uuids(tables)
-        summary_docs: list[Document] = [
-            Document(page_content=table_summaries[num], metadata={self.id_key: table_ids[num]})
-            for num in range(len(tables))
-        ]
-
-        self.vectorstore.add_documents(summary_docs)
-        self.store.mset(list(zip(table_ids, tables)))
-
-    def add_images(self, images: list[base64], image_summaries: list[str]) -> None:
-        """Adding images and it`s summaries."""
-
-        if not images or not image_summaries:
-            print('No images or image_summaries.')
-            return
-
-        img_ids: list[str] = self.__generate_uuids(images)
-        summary_docs: list[Document] = [
-            Document(page_content=image_summaries[num], metadata={self.id_key: img_ids[num]})
-            for num in range(len(images))
-        ]
-
-        self.vectorstore.add_documents(summary_docs)
-        self.store.mset(list(zip(img_ids, images)))
+        self.docstore.mset(serialized_elements)
 
     @staticmethod
-    def __generate_uuids(seq: list[Any]) -> list[str]:
-        """Generate some of uuid4 for sequence."""
+    def _serialize_element(element: Element) -> bytes:
+        """Serialize Element with all metadata preserved."""
 
-        return [str(uuid.uuid4()) for _ in seq]
+        return pickle.dumps(element.to_dict())
+
+    @staticmethod
+    def _generate_doc_ids(n: int, source_doc_id: str | None = None) -> list[str]:
+        """Generate UUIDs. If source_doc_id is provided, it is attached as prefix."""
+
+        if source_doc_id:
+            return [f"{source_doc_id}_{uuid.uuid4()}" for _ in range(n)]
+
+        return [str(uuid.uuid4()) for _ in range(n)]
