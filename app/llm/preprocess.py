@@ -19,7 +19,7 @@ def element_to_prompt_text(elem: Element) -> str:
     return str(elem)
 
 
-def table_to_prompt_text(table: Element) -> str:
+async def table_to_prompt_text(table: Element) -> str:
     """Get table html format for llm summaries."""
 
     html: str | None = getattr(table.metadata, 'text_as_html', None)

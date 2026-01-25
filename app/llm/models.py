@@ -3,15 +3,17 @@ from langchain_ollama import OllamaLLM as OllamaClient
 from langchain_core.runnables import Runnable, RunnableConfig
 from langchain_core.runnables.utils import Input
 
+from core.config import TEXT_MODEL, IMAGE_DESCRIPTION_MODEL
+
 
 class OllamaLLMWrapper(Runnable):
     _instance = None
 
     def __new__(
         cls,
-        model: str = "llama3.2:3b",
-        temperature: float = 0.4,
-        num_predict: int = 120,
+        model: str = TEXT_MODEL,
+        temperature: float = 0.1,
+        num_predict: int | None = None,
     ):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -41,7 +43,10 @@ class LLaVAWrapper(Runnable):
     _instance = None
 
     def __new__(
-        cls, model: str = "llava:7b", temperature: float = 0.4, num_predict: int = 150
+        cls,
+        model: str = IMAGE_DESCRIPTION_MODEL,
+        temperature: float = 0.4,
+        num_predict: int | None = None,
     ):
         if cls._instance is None:
             cls._instance = super().__new__(cls)

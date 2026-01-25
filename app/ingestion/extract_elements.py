@@ -1,9 +1,11 @@
 import copy
 
-from unstructured.documents.elements import Element, Table, CompositeElement, Image
+from unstructured.documents.elements import Element, Table, CompositeElement, Image, FigureCaption, Footer
 
 
-def extract_tables_texts_images(chunks: list[Element]) -> tuple[list[Element], list[Element], list[Element]]:
+async def extract_tables_texts_images(chunks: list[Element]) -> tuple[list[Element], list[Element], list[Element]]:
+    """Extract data from chunks."""
+
     tables: list[Element] = []
     texts: list[Element] = []
     images: list[Element] = []
@@ -28,8 +30,11 @@ def extract_tables_texts_images(chunks: list[Element]) -> tuple[list[Element], l
                     tables.append(el)
                 elif isinstance(el, Image):
                     images.append(el)
+                elif isinstance(el, (FigureCaption, Footer)):
+                    continue
                 else:
-                    text_elements.append(el)
+                    if len(el.text) > 3:
+                        text_elements.append(el)
 
             # copy of CompositeElement, without tables and images
             if text_elements:

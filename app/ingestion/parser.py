@@ -1,3 +1,5 @@
+import asyncio
+
 from unstructured.partition.pdf import partition_pdf
 from unstructured.documents.elements import Element
 
@@ -25,3 +27,8 @@ def parse_input_document() -> list[Element]:
     )
 
     return chunks
+
+
+async def async_parse_input_document() -> list[Element]:
+    return await asyncio.to_thread(parse_input_document)
+
