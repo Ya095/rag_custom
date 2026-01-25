@@ -335,3 +335,4 @@ cython_debug/
 # custom
 /app/chroma.db
 /app/documents
+/app/docstore

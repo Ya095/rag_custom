@@ -9,39 +9,36 @@ from langchain_core.documents import Document
 from langchain_classic.retrievers.multi_vector import MultiVectorRetriever
 from unstructured.documents.elements import Element
 
-from config import APP_PATH
-from embeddings.adapter_embedding import SentenceTransformerEmbeddings
+import core.config as config
+from repository.embeddings import SentenceTransformerEmbeddings
+from utils.singleton import SingletonMeta
 
 
-class ChromaWork:
-    """
-    Chroma + LocalFileStore + MultiVectorRetriever
-    for multimodal (text / table / image) RAG.
-    """
+class ChromaWork(metaclass=SingletonMeta):
+    """Chroma + LocalFileStore + MultiVectorRetriever. For multimodal (text / table / image) RAG."""
 
     def __init__(self) -> None:
-        self.db_path: Path = APP_PATH / "chroma.db"
-        self.doc_store_path: Path = APP_PATH / "docstore"
+        self.db_path: Path = config.APP_PATH / 'chroma.db'
+        self.doc_store_path: Path = config.APP_PATH / 'docstore'
 
         self.vectorstore: Chroma | None = None
         self.docstore: LocalFileStore | None = None
         self.retriever: MultiVectorRetriever | None = None
 
-        self.id_key: str = "doc_id"
+        self.id_key: str = 'doc_id'
 
     @lru_cache
     def init_db(self) -> MultiVectorRetriever:
         """Initialize vectorstore, docstore and retriever."""
 
         embeddings = SentenceTransformerEmbeddings(
-            model_name="multi-qa-mpnet-base-dot-v1"
+            model_name='multi-qa-mpnet-base-dot-v1',
+            device=config.DEVICE,
         )
 
         self.vectorstore = Chroma(
-            collection_name="multi_modal_rag",
-            collection_metadata={
-                "description": "Multimodal RAG: text, tables and images"
-            },
+            collection_name='multi_modal_rag',
+            collection_metadata={'description': 'Multimodal RAG: text, tables and images'},
             embedding_function=embeddings,
             persist_directory=self.db_path.as_posix(),
         )
@@ -56,43 +53,7 @@ class ChromaWork:
 
         return self.retriever
 
-    def add_texts(
-        self,
-        texts: list[Element],
-        summaries: list[str],
-        source_doc_id: str | None = None,
-    ) -> None:
-        self._add_elements(
-            elements=texts,
-            summaries=summaries,
-            source_doc_id=source_doc_id,
-        )
-
-    def add_tables(
-        self,
-        tables: list[Element],
-        summaries: list[str],
-        source_doc_id: str | None = None,
-    ) -> None:
-        self._add_elements(
-            elements=tables,
-            summaries=summaries,
-            source_doc_id=source_doc_id,
-        )
-
-    def add_images(
-        self,
-        images: list[Element],
-        summaries: list[str],
-        source_doc_id: str | None = None,
-    ) -> None:
-        self._add_elements(
-            elements=images,
-            summaries=summaries,
-            source_doc_id=source_doc_id,
-        )
-
-    def _add_elements(
+    def add_element(
         self,
         elements: list[Element],
         summaries: list[str],
@@ -128,8 +89,8 @@ class ChromaWork:
                     page_content=summaries[idx],
                     metadata={
                         self.id_key: doc_id,
-                        "category": element.category,
-                        "source_doc_id": source_doc_id,
+                        'category': element.category,
+                        'source_doc_id': source_doc_id,
                     },
                 )
             )
