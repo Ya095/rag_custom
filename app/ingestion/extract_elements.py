@@ -1,24 +1,37 @@
-import copy
+from copy import copy
 
-from unstructured.documents.elements import Element, Table, CompositeElement, Image, FigureCaption, Footer
+from unstructured.documents.elements import (
+    Element,
+    Table,
+    CompositeElement,
+    Image,
+    Footer,
+    Text,
+)
 
 
-async def extract_tables_texts_images(chunks: list[Element]) -> tuple[list[Element], list[Element], list[Element]]:
+async def extract_tables_texts_images(
+    chunks: list[Element],
+    source_doc_id: str | None = None,
+) -> dict[str, list[Element]]:
     """Extract data from chunks."""
 
-    tables: list[Element] = []
-    texts: list[Element] = []
-    images: list[Element] = []
+    result: dict[str, list[Element]] = {
+        'tables': [],
+        'texts': [],
+        'images_for_description': [],
+        'images_for_file_storage_add': [],
+    }
 
     for chunk in chunks:
         # top-level table
         if isinstance(chunk, Table):
-            tables.append(chunk)
+            result['tables'].append(chunk)
             continue
 
-        # top level image
+        # top-level image
         if isinstance(chunk, Image):
-            images.append(chunk)
+            result['images_for_description'].append(chunk)
             continue
 
         if isinstance(chunk, CompositeElement):
@@ -26,21 +39,26 @@ async def extract_tables_texts_images(chunks: list[Element]) -> tuple[list[Eleme
             text_elements: list[Element] = []
 
             for el in orig_elements:
-                if isinstance(el, Table):
-                    tables.append(el)
-                elif isinstance(el, Image):
-                    images.append(el)
-                elif isinstance(el, (FigureCaption, Footer)):
+                if isinstance(el, Image):
+                    el.metadata.img_uid = el.id
+                    result['images_for_file_storage_add'].append(el)
+
+                    placeholder = Text(
+                        text=f"[[IMG:{source_doc_id}_{el.id}]]",
+                        metadata=copy(el.metadata),
+                    )
+                    text_elements.append(placeholder)
+                elif isinstance(el, Footer):
                     continue
                 else:
-                    if len(el.text) > 3:
+                    if len(el.text.strip()) > 5:
                         text_elements.append(el)
 
-            # copy of CompositeElement, without tables and images
+            # copy of CompositeElement, with images like a tag
             if text_elements:
-                chunk_copy: CompositeElement = copy.copy(chunk)
-                chunk_copy.metadata = copy.copy(chunk.metadata)
+                chunk_copy: CompositeElement = copy(chunk)
+                chunk_copy.metadata = copy(chunk.metadata)
                 chunk_copy.metadata.orig_elements = text_elements
-                texts.append(chunk_copy)
+                result['texts'].append(chunk_copy)
 
-    return tables, texts, images
+    return result

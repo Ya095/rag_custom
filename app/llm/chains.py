@@ -4,7 +4,7 @@ from langchain_core.runnables import RunnableSerializable
 from langchain_core.runnables.base import Other
 from unstructured.documents.elements import Element
 
-from llm.models import text_model, image_model
+from llm.models import text_model, image_model, answer_model
 from llm.preprocess import element_to_prompt_text
 from llm.prompts import *
 
@@ -45,4 +45,4 @@ def rag_answer_chain() -> RunnableSerializable[Other, Other] | RunnableSerializa
     """Receive the answer from the llm based on the context."""
 
     prompt = ChatPromptTemplate.from_template(RAG_ANSWER_PROMPT)
-    return prompt | text_model | StrOutputParser()
+    return prompt | answer_model | StrOutputParser()

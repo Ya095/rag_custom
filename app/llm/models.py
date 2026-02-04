@@ -6,21 +6,35 @@ from langchain_core.runnables.utils import Input
 from core.config import TEXT_MODEL, IMAGE_DESCRIPTION_MODEL
 
 
-class OllamaLLMWrapper(Runnable):
-    _instance = None
+class OllamaFactory:
+    _cache: dict[tuple, OllamaClient] = {}
 
-    def __new__(
+    @classmethod
+    def get(
         cls,
-        model: str = TEXT_MODEL,
-        temperature: float = 0.1,
+        *,
+        model: str,
+        temperature: float = 0.4,
         num_predict: int | None = None,
-    ):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance.model = OllamaClient(
-                model=model, temperature=temperature, num_predict=num_predict
+    ) -> OllamaClient:
+        """Return new model or existing from cache."""
+
+        key: tuple = (model, temperature, num_predict)
+
+        if key not in cls._cache:
+            cls._cache[key] = OllamaClient(
+                model=model,
+                temperature=temperature,
+                num_predict=num_predict,
             )
-        return cls._instance
+
+        return cls._cache[key]
+
+
+class OllamaRunnable(Runnable):
+
+    def __init__(self, client: OllamaClient):
+        self.client: OllamaClient = client
 
     def invoke(
         self,
@@ -28,7 +42,7 @@ class OllamaLLMWrapper(Runnable):
         config: RunnableConfig | None = None,
         **kwargs: Any,
     ):
-        return self._instance.model.invoke(input_str, config, **kwargs)
+        return self.client.invoke(input_str, config, **kwargs)
 
     async def ainvoke(
         self,
@@ -36,7 +50,7 @@ class OllamaLLMWrapper(Runnable):
         config: RunnableConfig | None = None,
         **kwargs: Any,
     ):
-        return await self._instance.model.ainvoke(input_str, config, **kwargs)
+        return await self.client.ainvoke(input_str, config, **kwargs)
 
 
 class LLaVAWrapper(Runnable):
@@ -74,5 +88,16 @@ class LLaVAWrapper(Runnable):
         return await self._instance.model.ainvoke(input_str, images=images or [])
 
 
-text_model = OllamaLLMWrapper()
+text_model = OllamaRunnable(
+    OllamaFactory.get(
+        model=TEXT_MODEL,
+        temperature=0.4,
+    )
+)
+answer_model = OllamaRunnable(
+    OllamaFactory.get(
+        model=TEXT_MODEL,
+        temperature=0.1,
+    )
+)
 image_model = LLaVAWrapper()

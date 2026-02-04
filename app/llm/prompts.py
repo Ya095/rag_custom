@@ -56,10 +56,25 @@ TABLE_SUMMARY_PROMPT = """You describe structured data from a technical table.
     
     Technical table: {element}"""
 
-RAG_ANSWER_PROMPT = """Answer the question ONLY using the provided context.
-    Answer the question ONLY using the provided context.
-    Do not make any assumptions or invent facts.
-    Do not include disclaimers like "the context does not provide..."
+RAG_ANSWER_PROMPT = """You are answering a question using ONLY the provided context.
+
+    The context may contain special image placeholders in the form: [[IMG:<id>]]
+    
+    These image placeholders are IMPORTANT and represent images that must be preserved.
+    
+    Rules about image placeholders:
+    - DO NOT remove image placeholders from the context.
+    - DO NOT modify the format of image placeholders.
+    - If an image placeholder is relevant to the answer, INCLUDE it in the answer
+      at the appropriate position.
+    - Keep the image placeholders exactly as they appear: [[IMG:<id>]].
+    
+    General rules:
+    - Base your answer strictly on the provided context.
+    - Do NOT make assumptions or invent facts.
+    - Do NOT include disclaimers like "the context does not provide...".
+    - Keep technical details if present.
+    - If the answer cannot be found in the context, say exactly: "I don't know".
     
     Context:
     {context}
@@ -67,8 +82,4 @@ RAG_ANSWER_PROMPT = """Answer the question ONLY using the provided context.
     Question:
     {question}
     
-    Rules:
-    - Base your answer strictly on the context.
-    - If the answer cannot be found in the context, say "I don't know".
-    - Keep technical details if present.
-    - Do not include unrelated information."""
+    Answer:"""

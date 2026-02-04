@@ -1,4 +1,5 @@
 import asyncio
+import uuid
 
 from unstructured.partition.pdf import partition_pdf
 from unstructured.documents.elements import Element
@@ -10,7 +11,7 @@ file_name = 'attention.pdf'
 file_name_path = APP_PATH / 'documents' / file_name
 
 
-def parse_input_document() -> list[Element]:
+def parse_input_document() -> tuple[list[Element], str]:
     """Parse intput document from docs."""
 
     chunks: list[Element] = partition_pdf(
@@ -26,9 +27,11 @@ def parse_input_document() -> list[Element]:
         new_after_n_chars=3000,
     )
 
-    return chunks
+    source_doc_id: str = str(uuid.uuid4())
+
+    return chunks, source_doc_id
 
 
-async def async_parse_input_document() -> list[Element]:
+async def async_parse_input_document() -> tuple[list[Element], str]:
     return await asyncio.to_thread(parse_input_document)
 
