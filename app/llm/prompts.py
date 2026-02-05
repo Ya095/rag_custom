@@ -9,7 +9,7 @@ IMAGE_SUMMARY_PROMPT = """Describe the visual content precisely.
     - Describe visible comparisons (higher/lower), increases/decreases, peaks, and outliers.
 
     Rules:
-    - Use at most 300 tokens.
+    - Use at most 170 tokens.
     - Describe only what is visible.
     - No assumptions, explanations, or conclusions.
     - Do not mention that this is an image.
@@ -26,7 +26,7 @@ TEXT_SUMMARY_PROMPT = """You summarize a technical text fragment.
     - Remove redundancy.
 
     Constraints:
-    - Use at most 220 tokens.
+    - Use at most 160 tokens.
     - Write factual statements only.
     - No introductions or conclusions.
     - Do not mention that this is a summary.
@@ -45,7 +45,7 @@ TABLE_SUMMARY_PROMPT = """You describe structured data from a technical table.
     - Highlight key numeric differences and notable values.
 
     Constraints:
-    - Use at most 250 tokens.
+    - Use at most 180 tokens.
     - Do not reproduce table formatting.
     - No interpretation beyond the data.
     - Do not mention that this is a table.
@@ -56,18 +56,26 @@ TABLE_SUMMARY_PROMPT = """You describe structured data from a technical table.
     
     Technical table: {element}"""
 
-RAG_ANSWER_PROMPT = """You are answering a question using ONLY the provided context.
+RAG_ANSWER_PROMPT = """You are an assistant for answering questions. 
+    You need to answer the question using ONLY the context provided. 
+    But you'd better give me a detailed answer.
 
     The context may contain special image placeholders in the form: [[IMG:<id>]]
-    
     These image placeholders are IMPORTANT and represent images that must be preserved.
     
     Rules about image placeholders:
     - DO NOT remove image placeholders from the context.
     - DO NOT modify the format of image placeholders.
-    - If an image placeholder is relevant to the answer, INCLUDE it in the answer
-      at the appropriate position.
-    - Keep the image placeholders exactly as they appear: [[IMG:<id>]].
+    - Treat image placeholders as inline content, not as attachments.
+    - If an image placeholder is relevant, include it immediately after
+      the sentence or paragraph that refers to it.
+    - Preserve the original order of image placeholders exactly as in the context.
+    - NEVER move image placeholders to the end of the answer
+      unless they appear at the end of the context.
+    - NEVER group image placeholders together unless they are grouped in the context.
+    - Generate the answer sequentially, following the context top to bottom.
+    
+    Keep the image placeholders exactly as they appear: [[IMG:<id>]].
     
     General rules:
     - Base your answer strictly on the provided context.

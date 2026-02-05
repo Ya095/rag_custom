@@ -18,13 +18,13 @@ def parse_input_document() -> tuple[list[Element], str]:
         filename=file_name_path.absolute().as_posix(),
         languages=['eng'],
         infer_table_structure=True,  # extract tables
-        strategy="hi_res",  # mandatory to infer tables
-        extract_image_block_types=["Image"],  # Add 'Table' to list to extract image of tables
+        strategy='hi_res',  # mandatory to infer tables
+        extract_image_block_types=['Image'],  # Add 'Table' to list to extract image of tables
         extract_image_block_to_payload=True,  # if true, will extract base64 for API usage
-        chunking_strategy="by_title",
-        max_characters=5000,
-        combine_text_under_n_chars=1500,
-        new_after_n_chars=3000,
+        chunking_strategy='by_title',
+        max_characters=3500,
+        new_after_n_chars=2200,
+        combine_text_under_n_chars=800,
     )
 
     source_doc_id: str = str(uuid.uuid4())

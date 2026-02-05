@@ -7,6 +7,21 @@ from unstructured.documents.elements import (
     Image,
     Footer,
     Text,
+    PageNumber,
+    Header,
+    PageBreak,
+    Address,
+    EmailAddress,
+)
+
+
+SKIP_TYPES = (
+    Footer,
+    Header,
+    PageNumber,
+    PageBreak,
+    Address,
+    EmailAddress,
 )
 
 
@@ -40,18 +55,19 @@ async def extract_tables_texts_images(
 
             for el in orig_elements:
                 if isinstance(el, Image):
-                    el.metadata.img_uid = el.id
+                    img_uid: str = f'{source_doc_id}_{el.id}'
+                    el.metadata.img_uid = img_uid
                     result['images_for_file_storage_add'].append(el)
 
                     placeholder = Text(
-                        text=f"[[IMG:{source_doc_id}_{el.id}]]",
+                        text=f'[[IMG:{img_uid}]]',
                         metadata=copy(el.metadata),
                     )
                     text_elements.append(placeholder)
-                elif isinstance(el, Footer):
+                elif isinstance(el, SKIP_TYPES):
                     continue
                 else:
-                    if len(el.text.strip()) > 5:
+                    if len(el.text.strip()) > 20:
                         text_elements.append(el)
 
             # copy of CompositeElement, with images like a tag

@@ -46,10 +46,11 @@ async def run():
     # await chroma_work.async_add_elements_only_to_storage(images_from_text, source_doc_id)
 
     print('Вопрос-ответ...')
-    question: str = 'What is the Multi-Head Attention?'
+    question: str = 'What is the Encoder and Decoder Stacks?'
     chunks_new: list[bytes] = await retriever.ainvoke(question)
 
     retrieved: list[Element] = []
+    img_uids: list[str] = []
 
     for raw in chunks_new:
         element_dict = pickle.loads(raw)
@@ -58,24 +59,33 @@ async def run():
         el: Element = element_list[0]
         retrieved.append(el)
 
+        for sub_el in el.metadata.orig_elements:
+            if getattr(sub_el.metadata, 'img_uid', None) is not None:
+                img_uids.append(sub_el.metadata.img_uid)
+
     context: str = await build_context(retrieved)
 
-    # todo указать модели, что бы она старалась в ответе вставлять изображения
-    #  внутри контекста а не после него, если это возможно. Что бы сохранить оригинальный порядок и контекст.
     chain = rag_answer_chain()
-    answer: str = await chain.ainvoke({'context': context, 'question': question})
+    answer_with_image_uid: str = await chain.ainvoke({'context': context, 'question': question})
 
-    print('\n\n', answer, '\n\n')
+    print('\n\n', answer_with_image_uid, '\n\n')
 
-    # todo доделать замену тега на base64 обратно
-    # for img_uid, b64 in img_map.items():
-    # for
-    #     final_answer = final_answer.replace(
-    #         f"[[IMG:{img_uid}]]",
-    #         f"<img src='data:image/png;base64,{b64}'/>"
-    #     )
+    llm_answer: str = answer_with_image_uid
 
-    print('\n-----------------------------------------\n', answer)
+    for img_uid in img_uids:
+        img_b64_raw: bytes | None = await chroma_work.get_content_from_storage(img_uid)
+
+        if img_b64_raw is not None:
+            element_dict: dict = pickle.loads(img_b64_raw)
+            element_list: list[Element] = await asyncio.to_thread(elements_from_dicts, [element_dict])
+            img_b64: str = element_list[0].metadata.image_base64
+
+            llm_answer = llm_answer.replace(
+                f"[[IMG:{img_uid}]]",
+                f"<img src='data:image/png;base64,{img_b64}'/>"
+            )
+
+    print('\n-----------------------------------------\n', llm_answer)
 
 
 if __name__ == '__main__':

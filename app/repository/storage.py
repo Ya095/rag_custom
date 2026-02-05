@@ -47,7 +47,7 @@ class ChromaWork(metaclass=SingletonMeta):
             vectorstore=self.vectorstore,
             docstore=self.docstore,
             id_key=self.id_key,
-            search_kwargs={'k': 3},
+            search_kwargs={'k': 4},
         )
 
         return self.retriever

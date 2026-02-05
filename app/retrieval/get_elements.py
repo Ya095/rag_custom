@@ -17,9 +17,12 @@ async def element_to_context_html(el: Element) -> str:
         parts: list[str] = []
 
         for sub_el in el.metadata.orig_elements or []:
-            text: str = sub_el.text
-            if text:
-                parts.append(text)
+            if isinstance(sub_el, Table):
+                parts.append(sub_el.metadata.text_as_html)
+                continue
+
+            if sub_el.text:
+                parts.append(sub_el.text)
 
         return '\n'.join(parts)
 
