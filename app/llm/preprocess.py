@@ -10,7 +10,7 @@ def element_to_prompt_text(elem: Element) -> str:
         for sub_elem in elem.metadata.orig_elements:
             if hasattr(sub_elem, 'text') and sub_elem.text:
                 parts.append(sub_elem.text)
-        return "\n".join(parts)
+        return '\n'.join(parts)
 
     # Plain text element
     if hasattr(elem, 'text') and elem.text:

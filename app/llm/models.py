@@ -97,7 +97,7 @@ text_model = OllamaRunnable(
 answer_model = OllamaRunnable(
     OllamaFactory.get(
         model=TEXT_MODEL,
-        temperature=0.1,
+        temperature=0,
     )
 )
 image_model = LLaVAWrapper()

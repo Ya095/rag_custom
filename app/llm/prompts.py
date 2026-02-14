@@ -58,7 +58,7 @@ TABLE_SUMMARY_PROMPT = """You describe structured data from a technical table.
 
 RAG_ANSWER_PROMPT = """You are an assistant for answering questions. 
     You need to answer the question using ONLY the context provided. 
-    But you'd better give me a detailed answer.
+    Detail the answer on a scale of 6 out of 10.
 
     The context may contain special image placeholders in the form: [[IMG:<id>]]
     These image placeholders are IMPORTANT and represent images that must be preserved.
@@ -67,11 +67,8 @@ RAG_ANSWER_PROMPT = """You are an assistant for answering questions.
     - DO NOT remove image placeholders from the context.
     - DO NOT modify the format of image placeholders.
     - Treat image placeholders as inline content, not as attachments.
-    - If an image placeholder is relevant, include it immediately after
-      the sentence or paragraph that refers to it.
     - Preserve the original order of image placeholders exactly as in the context.
-    - NEVER move image placeholders to the end of the answer
-      unless they appear at the end of the context.
+    - NEVER move image placeholders to the end of the answer unless they appear at the end of the context.
     - NEVER group image placeholders together unless they are grouped in the context.
     - Generate the answer sequentially, following the context top to bottom.
     

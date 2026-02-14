@@ -1,92 +1,96 @@
 import asyncio
-import pickle
+import uuid
 
-from langchain_classic.retrievers import MultiVectorRetriever
-from unstructured.documents.elements import Element, Image
-from unstructured.staging.base import elements_from_dicts
+from unstructured.documents.elements import Element
+from unstructured.partition.pdf import partition_pdf
 
 from ingestion.extract_elements import extract_tables_texts_images
-from ingestion.parser import async_parse_input_document
-from llm.chains import summaries_text_data, summaries_table_data, summaries_images, rag_answer_chain
+from ingestion.interfaces import IProcessDocument
+from llm.chains import summaries_text_data, summaries_table_data, summaries_images
 from llm.preprocess import table_to_prompt_text
 from repository.storage import ChromaWork
-from retrieval.get_elements import build_context
 
 
-async def run():
-    # print('Разбивка документа')
-    # chunks_, source_doc_id = await async_parse_input_document()
-    # extracted_els: dict[str, list[Element]] = await extract_tables_texts_images(chunks_, source_doc_id)
-    #
-    # tables: list[Element] = extracted_els['tables']
-    # plain_text: list[Element] = extracted_els['texts']
-    # images_for_description: list[Element] = extracted_els['images_for_description']
-    # images_from_text: list[Element] = extracted_els['images_for_file_storage_add']
-    #
-    # print('Старт обработки текста')
-    # summarize_chain_text = summaries_text_data()
-    # text_summaries = await summarize_chain_text.abatch(plain_text, {'max_concurrency': 3})
-    #
-    # print('Старт обработки таблиц')
-    # summarize_chain_table = summaries_table_data()
-    # table_inputs = [await table_to_prompt_text(t) for t in tables]
-    # table_summaries = await summarize_chain_table.abatch(table_inputs, {'max_concurrency': 3})
-    #
-    # print('Старт обработки изображений')
-    # image_summaries: list[str] = [await summaries_images(img) for img in images_for_description]
+class ProcessDocumentPDF(IProcessDocument):
+    def __init__(self):
+        self.chroma_work = ChromaWork()
+        self.source_doc_id: str | None = None
 
-    # work with db
-    chroma_work = ChromaWork()
-    retriever: MultiVectorRetriever = await chroma_work.init_db()
+    async def process_document(self, input_file) -> str:
+        """Processes the incoming document.
 
-    # print('Добавление данных в БД')
-    # await chroma_work.async_add_elements(plain_text, text_summaries, source_doc_id)
-    # await chroma_work.async_add_elements(tables, table_summaries, source_doc_id)
-    # await chroma_work.async_add_elements(images_for_description, image_summaries, source_doc_id)
-    # await chroma_work.async_add_elements_only_to_storage(images_from_text, source_doc_id)
+        It splits the data into chunks and writes it to the database and file storage.
+        """
 
-    print('Вопрос-ответ...')
-    question: str = 'What is the Encoder and Decoder Stacks?'
-    chunks_new: list[bytes] = await retriever.ainvoke(question)
+        chunks_ = await self.parse_input_document(input_file)
+        extracted_elements: dict[str, list[Element]] = await extract_tables_texts_images(chunks_)
+        data_for_save: dict[str, tuple] = await self._process_extracted_elements(extracted_elements)
+        await self._save_data_to_storage(data_for_save)
 
-    retrieved: list[Element] = []
-    img_uids: list[str] = []
+        return self.source_doc_id
 
-    for raw in chunks_new:
-        element_dict = pickle.loads(raw)
-        element_list: list[Element] = await asyncio.to_thread(elements_from_dicts, [element_dict])
+    async def parse_input_document(self, input_file) -> list[Element]:
+        return await asyncio.to_thread(self._parse_input_document, input_file)
 
-        el: Element = element_list[0]
-        retrieved.append(el)
+    async def _process_extracted_elements(
+        self,
+        extracted_elements: dict[str, list[Element]],
+    ) -> dict[str, tuple[list[Element], str] | list[Element]]:
+        """Processing of the elements that were identified in the document."""
 
-        for sub_el in el.metadata.orig_elements:
-            if getattr(sub_el.metadata, 'img_uid', None) is not None:
-                img_uids.append(sub_el.metadata.img_uid)
+        tables: list[Element] = extracted_elements['tables']
+        plain_text: list[Element] = extracted_elements['texts']
+        images_for_description: list[Element] = extracted_elements['images_for_description']
+        images_from_text: list[Element] = extracted_elements['images_for_file_storage_add']
 
-    context: str = await build_context(retrieved)
+        print('Старт обработки текста')
+        summarize_chain_text = summaries_text_data()
+        text_summaries: str = await summarize_chain_text.abatch(plain_text, {'max_concurrency': 3})
 
-    chain = rag_answer_chain()
-    answer_with_image_uid: str = await chain.ainvoke({'context': context, 'question': question})
+        print('Старт обработки таблиц')
+        summarize_chain_table = summaries_table_data()
+        table_inputs: list[str] = [await table_to_prompt_text(t) for t in tables]
+        table_summaries: str = await summarize_chain_table.abatch(table_inputs, {'max_concurrency': 3})
 
-    print('\n\n', answer_with_image_uid, '\n\n')
+        print('Старт обработки изображений')
+        image_summaries: list[str] = [await summaries_images(img) for img in images_for_description]
 
-    llm_answer: str = answer_with_image_uid
+        return {
+            'text_data': (plain_text, text_summaries),
+            'table_data': (tables, table_summaries),
+            'images_data': (images_for_description, image_summaries),
+            'only_for_storage_data': images_from_text,
+        }
 
-    for img_uid in img_uids:
-        img_b64_raw: bytes | None = await chroma_work.get_content_from_storage(img_uid)
+    async def _save_data_to_storage(self, data_for_save: dict[str, tuple]) -> None:
+        """Saving the processed data to the database and storage."""
 
-        if img_b64_raw is not None:
-            element_dict: dict = pickle.loads(img_b64_raw)
-            element_list: list[Element] = await asyncio.to_thread(elements_from_dicts, [element_dict])
-            img_b64: str = element_list[0].metadata.image_base64
+        text_data: tuple = data_for_save['text_data']
+        table_data: tuple = data_for_save['table_data']
+        images_data: tuple = data_for_save['images_data']
+        only_for_storage_data: list[Element] = data_for_save['only_for_storage_data']
 
-            llm_answer = llm_answer.replace(
-                f"[[IMG:{img_uid}]]",
-                f"<img src='data:image/png;base64,{img_b64}'/>"
-            )
+        await self.chroma_work.async_add_elements(text_data[0], text_data[1], self.source_doc_id)
+        await self.chroma_work.async_add_elements(table_data[0], table_data[1], self.source_doc_id)
+        await self.chroma_work.async_add_elements(images_data[0], images_data[1], self.source_doc_id)
+        await self.chroma_work.async_add_elements_only_to_storage(only_for_storage_data, self.source_doc_id)
 
-    print('\n-----------------------------------------\n', llm_answer)
+    def _parse_input_document(self, input_file) -> list[Element]:
+        """Parse intput document from docs."""
 
+        chunks: list[Element] = partition_pdf(
+            file=input_file,
+            languages=['eng'],
+            infer_table_structure=True,  # extract tables
+            strategy='hi_res',  # mandatory to infer tables
+            extract_image_block_types=['Image'],  # Add 'Table' to list to extract image of tables
+            extract_image_block_to_payload=True,  # if true, will extract base64 for API usage
+            chunking_strategy='by_title',
+            max_characters=3500,
+            new_after_n_chars=2200,
+            combine_text_under_n_chars=800,
+        )
 
-if __name__ == '__main__':
-    asyncio.run(run())
+        self.source_doc_id: str = str(uuid.uuid4())
+
+        return chunks
