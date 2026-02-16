@@ -8,7 +8,7 @@ from langchain_core.documents import Document
 from langchain_classic.retrievers.multi_vector import MultiVectorRetriever
 from unstructured.documents.elements import Element
 
-import core.config as config
+import config
 from repository.embeddings import SentenceTransformerEmbeddings
 from utils.singleton import SingletonMeta
 
@@ -30,13 +30,13 @@ class ChromaWork(metaclass=SingletonMeta):
         """Initialize vectorstore, docstore and retriever."""
 
         embeddings = SentenceTransformerEmbeddings(
-            model_name='multi-qa-mpnet-base-dot-v1',
+            model_name=config.EMBEDDING_MODEL_NAME,
             device=config.DEVICE,
         )
 
         self.vectorstore = Chroma(
-            collection_name='multi_modal_rag',
-            collection_metadata={'description': 'Multimodal RAG: text, tables and images'},
+            collection_name=config.COLLECTION_NAME,
+            collection_metadata={'description': config.COLLECTION_METADATA_DESCRIPTION},
             embedding_function=embeddings,
             persist_directory=self.db_path.as_posix(),
         )
@@ -47,7 +47,7 @@ class ChromaWork(metaclass=SingletonMeta):
             vectorstore=self.vectorstore,
             docstore=self.docstore,
             id_key=self.id_key,
-            search_kwargs={'k': 3},
+            search_kwargs=config.RETRIEVER_SEARCH_KWARGS,
         )
 
         return self.retriever

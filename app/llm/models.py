@@ -3,7 +3,7 @@ from langchain_ollama import OllamaLLM as OllamaClient
 from langchain_core.runnables import Runnable, RunnableConfig
 from langchain_core.runnables.utils import Input
 
-from core.config import TEXT_MODEL, IMAGE_DESCRIPTION_MODEL
+from config import TEXT_MODEL, IMAGE_DESCRIPTION_MODEL
 
 
 class OllamaFactory:

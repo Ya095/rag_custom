@@ -3,9 +3,11 @@ import asyncio
 from langchain.embeddings.base import Embeddings
 from sentence_transformers import SentenceTransformer
 
+from config import DEVICE
+
 
 class SentenceTransformerEmbeddings(Embeddings):
-    def __init__(self, model_name: str, device: str = 'cpu'):
+    def __init__(self, model_name: str, device: str = DEVICE):
         self.model = SentenceTransformer(model_name_or_path=model_name, device=device)
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
