@@ -14,26 +14,27 @@ input_file: BytesIO = st.file_uploader('Choose a PDF', type=['pdf'])
 if input_file is not None:
     with st.spinner('Processing file...'):
         obj = ProcessDocumentPDF()
+        # TODO переписать на sync адаптер
         doc_id: str = asyncio.run(obj.process_document(input_file))
 
     st.success(f"file successfully processed.")
     st.caption("You can upload another PDF if you like.")
 
 st.divider()
-st.title("Ask a question about your PDFs")
+st.title("Enter your question.")
 
 with st.form("rag_query_form"):
     question = st.text_input("Your question")
-    top_k = st.number_input("How many chunks to retrieve", min_value=1, max_value=7, value=4, step=1)
     submitted = st.form_submit_button("Ask")
 
     if submitted and question.strip():
-        with st.spinner("Sending event and generating answer..."):
-            obj = ProcessQuestion()
-            answer: str = obj.process_pipeline_sync(question)
+        with st.spinner("Generating answer..."):
+            answer: str = ProcessQuestion().process_pipeline_sync(question)
 
         st.subheader("Answer")
-        st.write(answer or "(No answer)")
+        st.markdown(answer, unsafe_allow_html=True)
+
+        # TODO добавить источники (название документа + номер страницы.)
         # if sources:
         #     st.caption("Sources")
         #     for s in sources:

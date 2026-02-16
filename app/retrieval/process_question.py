@@ -22,7 +22,6 @@ class ProcessQuestion:
         if self.chroma_work.retriever is None:
             await self.chroma_work.init_db()
 
-        # question: str = 'What is the Encoder and Decoder Stacks?'
         img_uids: list[str] = []
         context = await self.get_context(question, img_uids)
 
@@ -59,6 +58,8 @@ class ProcessQuestion:
 
         print('Start build context.')
         context: str = await build_context(retrieved)
+
+        print('------------- CONTEXT ------------\n', context, '\n')
 
         return context
 

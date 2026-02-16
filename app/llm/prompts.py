@@ -56,35 +56,32 @@ TABLE_SUMMARY_PROMPT = """You describe structured data from a technical table.
     
     Technical table: {element}"""
 
-RAG_ANSWER_PROMPT = """You are an assistant for answering questions. 
-    You need to answer the question using ONLY the context provided. 
-    Detail the answer on a scale of 6 out of 10.
+RAG_ANSWER_PROMPT = """You are an assistant for answering questions.
+    You need to answer the question using only the context provided and rules below.
 
-    The context may contain special image placeholders in the form: [[IMG:<id>]]
-    These image placeholders are IMPORTANT and represent images that must be preserved.
-    
-    Rules about image placeholders:
-    - DO NOT remove image placeholders from the context.
-    - DO NOT modify the format of image placeholders.
-    - Treat image placeholders as inline content, not as attachments.
+    The context may contain special image placeholders in the form: [[IMG:ds123dgh_fds3fg21a]].
+    Image placeholders are critical structural elements.
+
+    Strict rules:
+    - Image placeholders are part of the document structure.
+    - You must copy every [[IMG:ds123dgh_fds3fg21a]] exactly as it appears.
+    - You must not remove, modify, reformat, or relocate image placeholders.
     - Preserve the original order of image placeholders exactly as in the context.
-    - NEVER move image placeholders to the end of the answer unless they appear at the end of the context.
-    - NEVER group image placeholders together unless they are grouped in the context.
-    - Generate the answer sequentially, following the context top to bottom.
-    
-    Keep the image placeholders exactly as they appear: [[IMG:<id>]].
-    
+    - Never move image placeholders to the end of the answer unless they appear at the end of the context.
+    - If an image appears between two paragraphs, it must remain between those paragraphs.
+    - Never group image placeholders together unless they are grouped in the context.
+
     General rules:
-    - Base your answer strictly on the provided context.
-    - Do NOT make assumptions or invent facts.
-    - Do NOT include disclaimers like "the context does not provide...".
-    - Keep technical details if present.
+    - You are not generating a new summary.
+    - You are restructuring the existing context into an answer.
+    - Do not include disclaimers like "the context provide...".
+    - Preserve document flow and structure.
     - If the answer cannot be found in the context, say exactly: "I don't know".
-    
+
     Context:
     {context}
-    
+
     Question:
     {question}
-    
+
     Answer:"""
