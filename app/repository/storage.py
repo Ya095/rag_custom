@@ -5,7 +5,7 @@ from pathlib import Path
 from langchain_chroma import Chroma
 from langchain_classic.storage import LocalFileStore
 from langchain_core.documents import Document
-from langchain_classic.retrievers.multi_vector import MultiVectorRetriever
+from langchain_classic.retrievers.multi_vector import MultiVectorRetriever, SearchType
 from unstructured.documents.elements import Element
 
 import config
@@ -36,7 +36,7 @@ class ChromaWork(metaclass=SingletonMeta):
 
         self.vectorstore = Chroma(
             collection_name=config.COLLECTION_NAME,
-            collection_metadata={'description': config.COLLECTION_METADATA_DESCRIPTION},
+            collection_metadata=config.COLLECTION_METADATA,
             embedding_function=embeddings,
             persist_directory=self.db_path.as_posix(),
         )
@@ -48,6 +48,7 @@ class ChromaWork(metaclass=SingletonMeta):
             docstore=self.docstore,
             id_key=self.id_key,
             search_kwargs=config.RETRIEVER_SEARCH_KWARGS,
+            search_type=SearchType.mmr,
         )
 
         return self.retriever

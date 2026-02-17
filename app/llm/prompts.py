@@ -33,7 +33,7 @@ TEXT_SUMMARY_PROMPT = """You summarize a technical text fragment.
     - If the fragment is incomplete, summarize only what is present.
 
     Output:
-    One concise paragraph.
+    A concise paragraph with key searchable terms.
     
     Text fragment: {element}"""
 
@@ -75,7 +75,6 @@ RAG_ANSWER_PROMPT = """You are an assistant for answering questions.
     - You are not generating a new summary.
     - You are restructuring the existing context into an answer.
     - Do not include disclaimers like "the context provide...".
-    - Preserve document flow and structure.
     - If the answer cannot be found in the context, say exactly: "I don't know".
 
     Context:

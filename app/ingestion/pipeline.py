@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+from io import BytesIO
 
 from unstructured.documents.elements import Element
 from unstructured.partition.pdf import partition_pdf
@@ -14,17 +15,20 @@ from repository.storage import ChromaWork
 class ProcessDocumentPDF(IProcessDocument):
     def __init__(self):
         self.chroma_work = ChromaWork()
-        self.source_doc_id: str | None = None
+        self.source_doc_id: str = str(uuid.uuid4())
 
-    async def process_document(self, input_file) -> str:
+    async def process_document(self, input_file: BytesIO) -> str:
         """Processes the incoming document.
 
         It splits the data into chunks and writes it to the database and file storage.
         """
 
+        if self.chroma_work.retriever is None:
+            await self.chroma_work.init_db()
+
         chunks_ = await self.parse_input_document(input_file)
-        extracted_elements: dict[str, list[Element]] = await extract_tables_texts_images(chunks_)
-        data_for_save: dict[str, tuple] = await self._process_extracted_elements(extracted_elements)
+        extracted_elements: dict[str, list[Element]] = await extract_tables_texts_images(chunks_, self.source_doc_id)
+        data_for_save: dict[str, tuple | list[Element]] = await self._process_extracted_elements(extracted_elements)
         await self._save_data_to_storage(data_for_save)
 
         return self.source_doc_id
@@ -75,7 +79,7 @@ class ProcessDocumentPDF(IProcessDocument):
         await self.chroma_work.async_add_elements(images_data[0], images_data[1], self.source_doc_id)
         await self.chroma_work.async_add_elements_only_to_storage(only_for_storage_data, self.source_doc_id)
 
-    def _parse_input_document(self, input_file) -> list[Element]:
+    def _parse_input_document(self, input_file: BytesIO) -> list[Element]:
         """Parse intput document from docs."""
 
         chunks: list[Element] = partition_pdf(
@@ -86,11 +90,26 @@ class ProcessDocumentPDF(IProcessDocument):
             extract_image_block_types=['Image'],  # Add 'Table' to list to extract image of tables
             extract_image_block_to_payload=True,  # if true, will extract base64 for API usage
             chunking_strategy='by_title',
-            max_characters=3500,
-            new_after_n_chars=2200,
-            combine_text_under_n_chars=800,
+            max_characters=2000,
+            new_after_n_chars=1500,
+            combine_text_under_n_chars=400,
         )
 
-        self.source_doc_id: str = str(uuid.uuid4())
-
         return chunks
+
+
+async def main():
+    import config
+
+    doc_path = config.APP_PATH / 'documents'
+    with open(doc_path / 'attention.pdf', 'rb') as f:
+        file_ = BytesIO(f.read())
+
+    obj = ProcessDocumentPDF()
+    s_d_id = await obj.process_document(file_)
+
+    print(s_d_id)
+    print('DONE')
+
+if __name__ == '__main__':
+    asyncio.run(main())

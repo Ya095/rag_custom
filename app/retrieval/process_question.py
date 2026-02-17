@@ -46,8 +46,10 @@ class ProcessQuestion:
 
         print('Start getting data.')
         chunks_new: list[bytes] = await self.chroma_work.retriever.ainvoke(question)
+        # chunks_new: list[bytes] = await self.chroma_work.vectorstore.amax_marginal_relevance_search(question)
         retrieved: list[Element] = []
         source_data: list[dict[str, int | str]] = []
+        k = 1
 
         for raw in chunks_new:
             element_dict: dict = pickle.loads(raw)
@@ -106,7 +108,7 @@ class ProcessQuestion:
 
 async def main():
     obj = ProcessQuestion()
-    await obj.process_pipeline('What is the Encoder and Decoder Stacks?')
+    await obj.process_pipeline('What is the transformer model architecture? Describe me about it.')
 
 if __name__ == '__main__':
     asyncio.run(main())
