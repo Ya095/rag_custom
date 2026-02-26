@@ -17,9 +17,6 @@ class ProcessDocumentPDF(IProcessDocument):
         self.chroma_work = ChromaWork()
         self.source_doc_id: str = str(uuid.uuid4())
 
-    def process_document_sync(self, input_file: BytesIO) -> str:
-        return asyncio.run(self.process_document(input_file))
-
     async def process_document(self, input_file: BytesIO) -> str:
         """Processes the incoming document.
 
@@ -57,7 +54,6 @@ class ProcessDocumentPDF(IProcessDocument):
             {
                 'rpm': 30,
                 'max_concurrency': 2,
-                'max_retries': 2,
             }
         )
 
@@ -69,7 +65,6 @@ class ProcessDocumentPDF(IProcessDocument):
             {
                 'rpm': 30,
                 'max_concurrency': 2,
-                'max_retries': 2,
             }
         )
 
@@ -116,9 +111,9 @@ class ProcessDocumentPDF(IProcessDocument):
 
 
 async def main():
-    from config import APP_PATH
+    from config import config
 
-    doc_path = APP_PATH / 'documents'
+    doc_path = config.APP_PATH / 'documents'
     with open(doc_path / 'attention.pdf', 'rb') as f:
         file_ = BytesIO(f.read())
 
