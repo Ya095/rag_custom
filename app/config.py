@@ -1,22 +1,51 @@
 from pathlib import Path
 
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-APP_PATH: Path = Path(__file__).parent
 
-# llm module
-DEVICE: str = 'cpu'
-TEXT_MODEL: str = 'llama3.2:3b'
-IMAGE_DESCRIPTION_MODEL: str = 'llava:7b'
+BASE_PATH: Path = Path(__file__).parent.parent
 
-# Chroma module
-EMBEDDING_MODEL_NAME: str = 'multi-qa-mpnet-base-dot-v1'
-COLLECTION_NAME: str = 'multi_modal_rag'
-COLLECTION_METADATA: dict = {
-    'description': 'Multimodal RAG: text, tables and images',
-    'hnsw:space': 'ip',
-}
-RETRIEVER_SEARCH_KWARGS: dict = {
-    'k': 5,
-    'fetch_k': 20,
-    'lambda_mult': 0.7,
-}
+
+class CustomBaseSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=f'{BASE_PATH}/.env',
+        extra='allow',
+        case_sensitive=False,
+        env_prefix='',
+        env_file_encoding='utf-8',
+    )
+
+
+class LlmModelsSettings(CustomBaseSettings):
+    text_model: str = Field(validation_alias='LLM_TEXT_MODEL')
+    image_model: str = Field(validation_alias='LLM_IMAGE_MODEL')
+    api_token: str = Field(validation_alias='LLM_API_TOKEN')
+    base_url: str = Field(validation_alias='LLM_BASE_URL')
+    max_retries: int = Field(validation_alias='LLM_MAX_RETRIES', default=3)
+
+
+class DeviceSettings(CustomBaseSettings):
+    device: str = Field(validation_alias='DEVICE', default='cpu')
+
+
+class EmbeddingModelSettings(CustomBaseSettings):
+    model_name: str = Field(validation_alias='EMBEDDING_MODEL_NAME')
+
+
+class ChromaSettings(CustomBaseSettings):
+    collection_name: str = Field(validation_alias='CHROMA_COLLECTION_NAME')
+    collection_description: str = Field(validation_alias='CHROMA_COLLECTION_DESCRIPTION')
+    collection_hnsw_space: str = Field(validation_alias='CHROMA_HNSW_SPACE')
+
+
+class Config(BaseSettings):
+    llm_config: LlmModelsSettings = LlmModelsSettings()
+    device_config: DeviceSettings = DeviceSettings()
+    embedding_config: EmbeddingModelSettings = EmbeddingModelSettings()
+    chroma_config: ChromaSettings = ChromaSettings()
+
+    APP_PATH: Path = Path(__file__).parent
+
+
+config = Config()

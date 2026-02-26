@@ -4,7 +4,7 @@ from langchain_core.runnables import RunnableSerializable
 from langchain_core.runnables.base import Other
 from unstructured.documents.elements import Element
 
-from llm.models import text_model, image_model, answer_model
+from llm.models_groq import text_model, image_model, answer_model
 from llm.preprocess import element_to_prompt_text
 from llm.prompts import *
 
@@ -33,10 +33,7 @@ async def summaries_images(image_el: Element) -> str:
     image_base64: str = image_el.metadata.image_base64
 
     model = image_model
-    result: str = await model.ainvoke(
-        IMAGE_SUMMARY_PROMPT,
-        images=[image_base64]
-    )
+    result: str = await model.ainvoke(image_base64)
 
     return result
 

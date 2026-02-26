@@ -17,6 +17,9 @@ class ProcessDocumentPDF(IProcessDocument):
         self.chroma_work = ChromaWork()
         self.source_doc_id: str = str(uuid.uuid4())
 
+    def process_document_sync(self, input_file: BytesIO) -> str:
+        return asyncio.run(self.process_document(input_file))
+
     async def process_document(self, input_file: BytesIO) -> str:
         """Processes the incoming document.
 
@@ -49,12 +52,26 @@ class ProcessDocumentPDF(IProcessDocument):
 
         print('Старт обработки текста')
         summarize_chain_text = summaries_text_data()
-        text_summaries: str = await summarize_chain_text.abatch(plain_text, {'max_concurrency': 3})
+        text_summaries: str = await summarize_chain_text.abatch(
+            plain_text,
+            {
+                'rpm': 30,
+                'max_concurrency': 2,
+                'max_retries': 2,
+            }
+        )
 
         print('Старт обработки таблиц')
         summarize_chain_table = summaries_table_data()
         table_inputs: list[str] = [await table_to_prompt_text(t) for t in tables]
-        table_summaries: str = await summarize_chain_table.abatch(table_inputs, {'max_concurrency': 3})
+        table_summaries: str = await summarize_chain_table.abatch(
+            table_inputs,
+            {
+                'rpm': 30,
+                'max_concurrency': 2,
+                'max_retries': 2,
+            }
+        )
 
         print('Старт обработки изображений')
         image_summaries: list[str] = [await summaries_images(img) for img in images_for_description]
@@ -99,9 +116,9 @@ class ProcessDocumentPDF(IProcessDocument):
 
 
 async def main():
-    import config
+    from config import APP_PATH
 
-    doc_path = config.APP_PATH / 'documents'
+    doc_path = APP_PATH / 'documents'
     with open(doc_path / 'attention.pdf', 'rb') as f:
         file_ = BytesIO(f.read())
 

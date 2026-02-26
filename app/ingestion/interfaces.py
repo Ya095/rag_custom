@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from io import BytesIO
 
 from unstructured.documents.elements import Element
 
@@ -7,11 +8,11 @@ class IProcessDocument(ABC):
     """An interface for document processing classes such as .pdf, .docx, and so on."""
 
     @abstractmethod
-    async def parse_input_document(self, input_file) -> list[Element]:
+    async def process_document(self, input_file: BytesIO) -> str:
         pass
 
     @abstractmethod
-    async def process_document(self, input_file) -> str:
+    async def parse_input_document(self, input_file: BytesIO) -> list[Element]:
         pass
 
     @abstractmethod

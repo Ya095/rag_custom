@@ -336,3 +336,4 @@ cython_debug/
 /app/chroma.db
 /app/documents
 /app/docstore
+.git

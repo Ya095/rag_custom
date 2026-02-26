@@ -13,9 +13,6 @@ class ProcessQuestion:
     def __init__(self):
         self.chroma_work = ChromaWork()
 
-    def process_pipeline_sync(self, question: str) -> dict:
-        return asyncio.run(self.process_pipeline(question))
-
     async def process_pipeline(self, question: str) -> dict:
         """Processing user question and return an answer."""
 
@@ -108,7 +105,7 @@ class ProcessQuestion:
 
 async def main():
     obj = ProcessQuestion()
-    await obj.process_pipeline('What is the transformer model architecture? Describe me about it.')
+    await obj.process_pipeline('Describe me about "Scaled Dot-Product Attention"?')
 
 if __name__ == '__main__':
     asyncio.run(main())
