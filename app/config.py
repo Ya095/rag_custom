@@ -17,6 +17,12 @@ class CustomBaseSettings(BaseSettings):
     )
 
 
+class AppSettings(BaseSettings):
+    host: str = Field(validation_alias='APP_HOST', default='0.0.0.0')
+    port: int = Field(validation_alias='APP_PORT', default=8000)
+    reload: bool = Field(validation_alias='APP_RELOAD', default=True)
+
+
 class LlmModelsSettings(CustomBaseSettings):
     text_model: str = Field(validation_alias='LLM_TEXT_MODEL')
     image_model: str = Field(validation_alias='LLM_IMAGE_MODEL')
@@ -40,6 +46,7 @@ class ChromaSettings(CustomBaseSettings):
 
 
 class Config(BaseSettings):
+    app_config: AppSettings = AppSettings()
     llm_config: LlmModelsSettings = LlmModelsSettings()
     device_config: DeviceSettings = DeviceSettings()
     embedding_config: EmbeddingModelSettings = EmbeddingModelSettings()

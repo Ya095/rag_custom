@@ -15,4 +15,5 @@ dependencies = [
     "langchain-chroma==1.1.0",
     "openai==2.21.0",
     "pydantic-settings>=2.12.0",
+    "fastapi>=0.135.0",
 ]

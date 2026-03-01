@@ -1,5 +1,6 @@
 import asyncio
 import pickle
+from collections import defaultdict
 
 from unstructured.documents.elements import Element
 from unstructured.staging.base import elements_from_dicts
@@ -7,13 +8,14 @@ from unstructured.staging.base import elements_from_dicts
 from llm.chains import rag_answer_chain
 from repository.storage import ChromaWork
 from retrieval.get_elements import build_context
+from retrieval.interfaces import IProcesUserQuestion
 
 
-class ProcessQuestion:
+class ProcessQuestion(IProcesUserQuestion):
     def __init__(self):
         self.chroma_work = ChromaWork()
 
-    async def process_pipeline(self, question: str) -> dict:
+    async def get_answer(self, question: str) -> dict:
         """Processing user question and return an answer."""
 
         if self.chroma_work.retriever is None:
@@ -43,10 +45,8 @@ class ProcessQuestion:
 
         print('Start getting data.')
         chunks_new: list[bytes] = await self.chroma_work.retriever.ainvoke(question)
-        # chunks_new: list[bytes] = await self.chroma_work.vectorstore.amax_marginal_relevance_search(question)
         retrieved: list[Element] = []
-        source_data: list[dict[str, int | str]] = []
-        k = 1
+        source_data: dict[str, set[int]] = defaultdict(set)
 
         for raw in chunks_new:
             element_dict: dict = pickle.loads(raw)
@@ -54,13 +54,7 @@ class ProcessQuestion:
 
             el: Element = element_list[0]
             retrieved.append(el)
-
-            source_data.append(
-                {
-                    'page': el.metadata.page_number,
-                    'document_name': el.metadata.filename,
-                }
-            )
+            source_data[el.metadata.filename].add(el.metadata.page_number)
 
             for sub_el in el.metadata.orig_elements:
                 if getattr(sub_el.metadata, 'img_uid', None) is not None:
@@ -91,7 +85,7 @@ class ProcessQuestion:
                 img_b64: str = element_list[0].metadata.image_base64
 
                 new_img_element: str = (
-                    f"<img src='data:image/png;base64,{img_b64}'"
+                    f"<img id='{img_uid}' src='data:image/png;base64,{img_b64}'"
                     f" style='max-width:80%; height:auto;'/>"
                 )
                 llm_answer_with_base64_imgs = llm_answer_with_base64_imgs.replace(
@@ -105,7 +99,7 @@ class ProcessQuestion:
 
 async def main():
     obj = ProcessQuestion()
-    await obj.process_pipeline('Describe me about "Scaled Dot-Product Attention"?')
+    await obj.get_answer('Describe me about "Scaled Dot-Product Attention"?')
 
 if __name__ == '__main__':
     asyncio.run(main())
