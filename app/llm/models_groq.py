@@ -1,5 +1,4 @@
 import asyncio
-import re
 import time
 from functools import lru_cache
 
@@ -9,16 +8,16 @@ from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion
 from pydantic import PrivateAttr
 
-from config import config
+from config import config as app_config
 from llm.prompts import IMAGE_SUMMARY_PROMPT
 
 
 @lru_cache
 def get_async_client() -> AsyncOpenAI:
     return AsyncOpenAI(
-        api_key=config.llm_config.api_token,
-        base_url=config.llm_config.base_url,
-        max_retries=config.llm_config.max_retries,
+        api_key=app_config.llm_config.api_token,
+        base_url=app_config.llm_config.base_url,
+        max_retries=app_config.llm_config.max_retries,
     )
 
 
@@ -28,7 +27,7 @@ class GroqTextRunnable(RunnableSerializable):
     temperature: float = 0
 
     _client: AsyncOpenAI = PrivateAttr()
-    _last_call: float = PrivateAttr(default=0.0)
+    _last_call: float = PrivateAttr(default=0)
     _lock: asyncio.Lock = PrivateAttr()
 
     def __init__(self, **kwargs):
@@ -75,15 +74,6 @@ class GroqTextRunnable(RunnableSerializable):
 
         return response.choices[0].message.content
 
-    def _extract_wait_time(self, error_text: str) -> float | None:
-        """Calculating the time for a repeat request (for Groq models only)."""
-
-        match: re.Match[str] | None = re.search(r'try again in (\d+)s', error_text)
-        if match:
-            return float(match.group(1))
-
-        return None
-
     def _build_messages(self, input_data: Input) -> list[dict[str, str]]:
         """Building msg for llm model with correct format."""
 
@@ -93,6 +83,7 @@ class GroqTextRunnable(RunnableSerializable):
 
 
 class GroqVisionRunnable(RunnableSerializable):
+    """Class for working with image models."""
     model: str
     temperature: float = 0
     _client: AsyncOpenAI = PrivateAttr()
@@ -133,6 +124,6 @@ class GroqVisionRunnable(RunnableSerializable):
         return response.choices[0].message.content
 
 
-text_model = GroqTextRunnable(model=config.llm_config.text_model, temperature=0.4)
-answer_model = GroqTextRunnable(model=config.llm_config.text_model, temperature=0)
-image_model = GroqVisionRunnable(model=config.llm_config.image_model, temperature=0.5)
+text_model = GroqTextRunnable(model=app_config.llm_config.text_model, temperature=0.4)
+answer_model = GroqTextRunnable(model=app_config.llm_config.text_model, temperature=0)
+image_model = GroqVisionRunnable(model=app_config.llm_config.image_model, temperature=0.5)

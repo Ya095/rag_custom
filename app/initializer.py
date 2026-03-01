@@ -32,7 +32,11 @@ async def initialize(app: FastAPI):
 
 def create_app() -> FastAPI:
     """Creating fastapi app."""
-    app = FastAPI(lifespan=initialize)
+
+    app = FastAPI(
+        title='Rag custom.',
+        lifespan=initialize,
+    )
 
     add_middlewares(app)
     app.include_router(routers_v1)
