@@ -17,10 +17,10 @@ class CustomBaseSettings(BaseSettings):
     )
 
 
-class AppSettings(BaseSettings):
+class AppSettings(CustomBaseSettings):
     host: str = Field(validation_alias='APP_HOST', default='0.0.0.0')
     port: int = Field(validation_alias='APP_PORT', default=8000)
-    reload: bool = Field(validation_alias='APP_RELOAD', default=True)
+    reload: bool = Field(validation_alias='APP_RELOAD')
 
 
 class LlmModelsSettings(CustomBaseSettings):
@@ -28,7 +28,7 @@ class LlmModelsSettings(CustomBaseSettings):
     image_model: str = Field(validation_alias='LLM_IMAGE_MODEL')
     api_token: str = Field(validation_alias='LLM_API_TOKEN')
     base_url: str = Field(validation_alias='LLM_BASE_URL')
-    max_retries: int = Field(validation_alias='LLM_MAX_RETRIES', default=3)
+    max_retries: int = Field(validation_alias='LLM_MAX_RETRIES', ge=1, default=3)
 
 
 class DeviceSettings(CustomBaseSettings):
