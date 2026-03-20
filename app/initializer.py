@@ -12,23 +12,23 @@ from exceptions.exceptions import RAGBaseException
 
 
 LOGGING_CONFIG = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "default": {
-            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'default': {
+            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         },
     },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "default",
-            "stream": sys.stdout,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'default',
+            'stream': sys.stdout,
         },
     },
-    "root": {
-        "level": "INFO",
-        "handlers": ["console"],
+    'root': {
+        'level': 'INFO',
+        'handlers': ['console'],
     },
 }
 
@@ -38,11 +38,11 @@ def add_middlewares(app: FastAPI):
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=['*'],
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["Content-Disposition"],
+        allow_methods=['*'],
+        allow_headers=['*'],
+        expose_headers=['Content-Disposition'],
     )
 
 
@@ -52,19 +52,19 @@ def add_exception_handlers(app: FastAPI):
     @app.exception_handler(RAGBaseException)
     async def rag_exception_handler(request: Request, exc: RAGBaseException):
         logger = logging.getLogger(__name__)
-        logger.error(f"RAG exception: {exc}", exc_info=True)
+        logger.error('RAG exception: %s', str(exc), exc_info=True)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"detail": str(exc)},
+            content={'detail': str(exc)},
         )
 
     @app.exception_handler(Exception)
     async def generic_exception_handler(request: Request, exc: Exception):
         logger = logging.getLogger(__name__)
-        logger.error(f"Unhandled exception: {exc}", exc_info=True)
+        logger.error('Unhandled exception: %s', str(exc), exc_info=True)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"detail": "Internal server error"},
+            content={'detail': 'Internal server error'},
         )
 
 
@@ -73,18 +73,18 @@ async def initialize(app: FastAPI):
     """App initializer."""
     logging.config.dictConfig(LOGGING_CONFIG)
     logger = logging.getLogger(__name__)
-    logger.info("App started")
+    logger.info('App started')
 
     yield
 
-    logger.info("App closed")
+    logger.info('App closed')
 
 
 def create_app() -> FastAPI:
     """Creating fastapi app."""
 
     app = FastAPI(
-        title="Rag custom.",
+        title='Rag custom.',
         lifespan=initialize,
     )
 

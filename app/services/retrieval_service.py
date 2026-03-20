@@ -2,7 +2,6 @@ import asyncio
 import logging
 import pickle
 from collections import defaultdict
-from typing import TYPE_CHECKING
 
 from unstructured.documents.elements import Element
 from unstructured.staging.base import elements_from_dicts
@@ -12,8 +11,6 @@ from repository.storage import ChromaWork
 from retrieval.get_elements import build_context
 from .interfaces import IRetrievalService
 
-if TYPE_CHECKING:
-    from domain.value_objects import PageRef
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +20,7 @@ class RetrievalService(IRetrievalService):
         self._chroma_work = chroma_work
 
     async def retrieve_context(self, question: str) -> tuple[str, dict, list[str]]:
-        logger.info("Start getting data.")
+        logger.info('Start getting data.')
 
         if self._chroma_work.retriever is None:
             await self._chroma_work.init_db()
@@ -52,15 +49,15 @@ class RetrievalService(IRetrievalService):
                 orig_elements = el.metadata.orig_elements
                 if orig_elements:
                     for sub_el in orig_elements:
-                        img_uid = getattr(sub_el.metadata, "img_uid", None)
+                        img_uid = getattr(sub_el.metadata, 'img_uid', None)
                         if img_uid:
                             img_uids.append(img_uid)
 
-            except Exception as e:
-                logger.error(f"Error processing chunk: {e}")
-                raise RetrievalError(f"Failed to process retrieved chunk: {e}") from e
+            except Exception as err:
+                logger.error('Error processing chunk: %s', str(err))
+                raise RetrievalError(f'Failed to process retrieved chunk: {err}') from err
 
-        logger.info("Start build context.")
+        logger.info('Start build context.')
         context: str = await build_context(retrieved)
 
         return context, source_data, img_uids

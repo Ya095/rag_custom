@@ -23,17 +23,13 @@ class QuestionService(IQuestionService):
         self._image_service = image_service
 
     async def get_answer(self, question: str) -> Answer:
-        logger.info(f"Processing question: {question}")
+        logger.info('Processing question: %s', question)
 
-        context, source_data, img_uids = await self._retrieval_service.retrieve_context(
-            question
-        )
+        context, source_data, img_uids = await self._retrieval_service.retrieve_context(question)
+        logger.debug('Context:\n%s', context)
 
-        logger.debug(f"Context:\n{context}")
-
-        llm_raw_answer = await self._llm_service.get_answer(context, question)
-
-        llm_answer = await self._image_service.process_images(llm_raw_answer, img_uids)
+        llm_raw_answer: str = await self._llm_service.get_answer(context, question)
+        llm_answer: str = await self._image_service.process_images(llm_raw_answer, img_uids)
 
         sources = [
             Source(document_name=doc_name, page=page)

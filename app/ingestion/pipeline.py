@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import uuid
 from copy import copy
 from io import BytesIO
@@ -24,6 +25,7 @@ from llm.preprocess import table_to_prompt_text
 from repository.storage import ChromaWork
 
 
+logger = logging.getLogger(__name__)
 SKIP_TYPES = (
     Footer,
     Header,
@@ -122,7 +124,7 @@ class ProcessDocumentPDF(IProcessDocument):
         images_for_description: list[Element] = extracted_elements['images_for_description']
         images_from_text: list[Element] = extracted_elements['images_for_file_storage_add']
 
-        print('Старт обработки текста')
+        logger.info('Start text processing.')
         summarize_chain_text = summaries_text_data()
         text_summaries: str = await summarize_chain_text.abatch(
             plain_text,
@@ -132,7 +134,7 @@ class ProcessDocumentPDF(IProcessDocument):
             },
         )
 
-        print('Старт обработки таблиц')
+        logger.info('Start tables processing.')
         summarize_chain_table = summaries_table_data()
         table_inputs: list[str] = [await table_to_prompt_text(t) for t in tables]
         table_summaries: str = await summarize_chain_table.abatch(
@@ -143,7 +145,7 @@ class ProcessDocumentPDF(IProcessDocument):
             },
         )
 
-        print('Старт обработки изображений')
+        logger.info('Start imgs processing.')
         image_summaries: list[str] = [await summaries_images(img) for img in images_for_description]
 
         return {

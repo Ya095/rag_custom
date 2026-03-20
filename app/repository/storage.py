@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import pickle
 from pathlib import Path
 
@@ -11,6 +12,9 @@ from unstructured.documents.elements import Element
 from config import config
 from repository.embeddings import SentenceTransformerEmbeddings
 from utils.singleton import SingletonMeta
+
+
+logger = logging.getLogger(__name__)
 
 
 class ChromaWork(metaclass=SingletonMeta):
@@ -68,7 +72,7 @@ class ChromaWork(metaclass=SingletonMeta):
         """Add elements only to file storage."""
 
         if not elements:
-            print('Nothing to add: empty elements.')
+            logger.warning('Nothing to add: empty elements.')
             return
 
         if self.vectorstore is None or self.docstore is None:
@@ -96,7 +100,7 @@ class ChromaWork(metaclass=SingletonMeta):
         """
 
         if not elements or not summaries:
-            print('Nothing to add: empty elements or summaries.')
+            logger.warning('Nothing to add: empty elements or summaries.')
             return
 
         if len(elements) != len(summaries):
@@ -132,11 +136,11 @@ class ChromaWork(metaclass=SingletonMeta):
     async def get_content_from_storage(self, key: str) -> bytes | None:
         """Возвращает bytes файл по ключу."""
 
-        file_path = self.doc_store_path / key
+        file_path: Path = self.doc_store_path / key
         if file_path.exists():
             return file_path.read_bytes()
 
-        print('File not found by key:', key)
+        logger.warning('File not found by key: %s', key)
 
     @staticmethod
     async def _async_serialize_element(element: Element) -> bytes:
