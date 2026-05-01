@@ -17,16 +17,16 @@ logger = logging.getLogger(__name__)
 
 class RetrievalService(IRetrievalService):
     def __init__(self, chroma_work: ChromaWork):
-        self._chroma_work = chroma_work
+        self.chroma_work = chroma_work
 
     async def retrieve_context(self, question: str) -> tuple[str, dict, list[str]]:
         logger.info('Start getting data.')
 
-        if self._chroma_work.retriever is None:
-            await self._chroma_work.init_db()
+        if self.chroma_work.retriever is None:
+            await self.chroma_work.init_db()
 
         img_uids: list[str] = []
-        chunks_new: list[bytes] = await self._chroma_work.retriever.ainvoke(question)
+        chunks_new: list[bytes] = await self.chroma_work.retriever.ainvoke(question)
 
         retrieved: list[Element] = []
         source_data: dict[str, set[int]] = defaultdict(set)

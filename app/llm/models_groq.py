@@ -4,8 +4,9 @@ from functools import lru_cache
 
 from langchain_core.runnables import RunnableSerializable, RunnableConfig
 from langchain_core.runnables.utils import Input
-from openai import AsyncOpenAI
-from openai.types.chat import ChatCompletion
+from typing import AsyncGenerator
+from openai import AsyncOpenAI, AsyncStream
+from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from pydantic import PrivateAttr
 
 from config import config as app_config
@@ -23,6 +24,7 @@ def get_async_client() -> AsyncOpenAI:
 
 class GroqTextRunnable(RunnableSerializable):
     """Class for working with text models."""
+
     model: str
     temperature: float = 0
 
@@ -43,10 +45,11 @@ class GroqTextRunnable(RunnableSerializable):
         self,
         input_data: Input,
         config: RunnableConfig | None = None,
+        stream: bool = False,
         **kwargs,
-    ) -> str:
+    ) -> str | AsyncGenerator[str, None]:
+        messages: list[dict] = await self._build_messages(input_data)
 
-        # -------- LOCAL RPM LIMIT --------
         rpm = None
         if config and 'rpm' in config:
             rpm = config['rpm']
@@ -65,18 +68,49 @@ class GroqTextRunnable(RunnableSerializable):
 
                 self._last_call = time.monotonic()
 
-        messages: list[dict] = self._build_messages(input_data)
-        response: ChatCompletion = await self._client.chat.completions.create(
+        if stream:
+            stream_response:  AsyncStream[ChatCompletionChunk] = await self._client.chat.completions.create(
+                model=self.model,
+                temperature=self.temperature,
+                messages=messages,
+                stream=True,
+            )
+
+            async def _stream_generator():
+                async for chunk in stream_response:
+                    if chunk.choices[0].delta.content:
+                        yield chunk.choices[0].delta.content
+
+            return _stream_generator()
+        else:
+            response: ChatCompletion = await self._client.chat.completions.create(
+                model=self.model,
+                temperature=self.temperature,
+                messages=messages,
+            )
+            content = response.choices[0].message.content
+            return content if content else ''
+
+    async def astream(
+        self,
+        input_data: Input,
+        config: RunnableConfig | None = None,
+        **kwargs,
+    ) -> AsyncGenerator[str, None]:
+        messages: list[dict] = await self._build_messages(input_data)
+
+        stream_response = await self._client.chat.completions.create(
             model=self.model,
             temperature=self.temperature,
             messages=messages,
+            stream=True,
         )
 
-        return response.choices[0].message.content
+        async for chunk in stream_response:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
 
-    def _build_messages(self, input_data: Input) -> list[dict[str, str]]:
-        """Building msg for llm model with correct format."""
-
+    async def _build_messages(self, input_data: Input) -> list[dict]:
         if isinstance(input_data, list):
             return input_data
         return [{'role': 'user', 'content': str(input_data)}]
@@ -121,7 +155,8 @@ class GroqVisionRunnable(RunnableSerializable):
             messages=messages,
         )
 
-        return response.choices[0].message.content
+        content = response.choices[0].message.content
+        return content if content else ''
 
 
 text_model = GroqTextRunnable(model=app_config.llm_config.text_model, temperature=0.4)

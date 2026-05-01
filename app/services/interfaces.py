@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import AsyncGenerator
 
 from domain.entities.models import Answer
 
@@ -14,6 +15,10 @@ class ILLMService(ABC):
     async def get_answer(self, context: str, question: str) -> str:
         pass
 
+    @abstractmethod
+    async def stream_answer(self, context: str, question: str) -> AsyncGenerator[str, None]:
+        pass
+
 
 class IImageService(ABC):
     @abstractmethod
@@ -24,4 +29,8 @@ class IImageService(ABC):
 class IQuestionService(ABC):
     @abstractmethod
     async def get_answer(self, question: str) -> Answer:
+        pass
+
+    @abstractmethod
+    async def stream_answer(self, question: str) -> AsyncGenerator[dict, None]:
         pass
